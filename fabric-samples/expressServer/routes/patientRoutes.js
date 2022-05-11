@@ -83,25 +83,23 @@ router.patch('/:hospitalId/:patientId/grant/:doctorId', authenticateToken, async
         return res.sendStatus(400);
     }
 
-    // console.log(req.params);
-    console.log(hospitalId, patientId, doctorId);
-
     let args = {
-        patientId: patientId, 
+        patientId: patientId.trim(), 
         doctorId: doctorId
     };
     args = [JSON.stringify(args)];
 
     const networkObj = await network.connectToNetwork(patientId, hospId);
     const response = await network.invoke(networkObj, false, 'PatientContract:grantAccessToDoctor', args);
+    console.log(response);
     
     if(response.error){
-        res.status(401).json({
+        return res.status(401).json({
             message: "Could not grant Request",
         })
     }
     let parsedResponse = response.toString()
-    res.status(200).send(parsedResponse)
+    return res.status(200).send(parsedResponse)
 })
 
 

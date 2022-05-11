@@ -45,6 +45,7 @@ exports.enrollRegisterUser = async function (hospId, userId, attributes) {
         await registerAndEnrollUser(caClient, wallet, mspOrg, userId, adminId, attributes);
         console.log('Successfully enrolled user ' + userId + ' and imported it into the wallet');
     } catch (error) {
+        console.log(error);
         console.error(`Failed to register user "${userId}": ${error}`);
         process.exit(1);
     }

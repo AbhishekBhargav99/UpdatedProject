@@ -10,8 +10,7 @@ async function enrollPatients() {
         // returns buffer
         const buffer = fs.readFileSync('../patient-asset-transfer/chaincode/lib/initLedger.json');
         const patientData = JSON.parse(buffer);
-        // console.log(patientData);
-        let hospId = '1';
+        let hospId = '2';
         for(let i = 0; i < patientData.length; i++){
             let patient = patientData[i];
             const attr = {
