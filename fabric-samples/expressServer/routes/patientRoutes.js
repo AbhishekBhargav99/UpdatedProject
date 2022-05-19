@@ -4,7 +4,9 @@ const client = require('../../testBackend/redisUtils/client');
 const jwt = require('jsonwebtoken');
 const network = require('../../patient-assets/application-javascript/app.js');
 const patientModel  = require('../models/allModels').patientModel;
-
+const encrytLib = require('../middleware/encryptionlib');
+const encrypt = encrytLib.encrypt;
+const decrypt = encrytLib.decrypt;
 
 
 async function authenticateToken(req, res, next){
@@ -22,7 +24,13 @@ async function authenticateToken(req, res, next){
       next();
     })
     
-  }
+}
+
+function isEncrypted(patientId){
+    if(patientId == 'PID1000xyz' || patientId == 'PID1001xyz')
+        return false;
+    return true;
+}
 
 
 router.get('/allDoctors', authenticateToken, async (req, res) => {
@@ -42,6 +50,8 @@ router.get('/allDoctors', authenticateToken, async (req, res) => {
     res.status(200).send(response);
 })
 
+
+
 router.get('/details', authenticateToken, async(req, res) => {
 
 
@@ -56,6 +66,15 @@ router.get('/details', authenticateToken, async(req, res) => {
     const networkObj = await network.connectToNetwork(patientid, hospId);
     const response = await network.invoke(networkObj, true, 'PatientContract:getPatientPersonelDetails', args);
     const parsedRes = JSON.parse(response.toString())
+
+    if(isEncrypted(parsedRes['patientId'])){
+        for(let key in parsedRes){
+            if(key != 'patientId' && key != 'permissionGranted'){
+                parsedRes[key] = decrypt(parsedRes[key]);
+            }
+        }
+    }
+    
     try{
         
         let resp = await patientModel.findOne({patientId: patientid});
@@ -63,7 +82,6 @@ router.get('/details', authenticateToken, async(req, res) => {
         parsedRes.phoneNumber = resp.phoneNumber;
         parsedRes.weight = resp.weight;
         parsedRes.address = resp.address;
-       
         res.status(200).send(parsedRes);
     }catch(err){
         console.log('err', err.message);
@@ -85,7 +103,7 @@ router.patch('/:hospitalId/:patientId/grant/:doctorId', authenticateToken, async
 
     let args = {
         patientId: patientId.trim(), 
-        doctorId: doctorId
+        doctorId: doctorId.trim()
     };
     args = [JSON.stringify(args)];
 
@@ -114,8 +132,8 @@ router.patch('/:hospitalId/:patientId/revoke/:doctorId', authenticateToken, asyn
     console.log(hospitalId, patientId, doctorId);
 
     let args = {
-        patientId: patientId, 
-        doctorId: doctorId
+        patientId: patientId.trim(), 
+        doctorId: doctorId.trim()
     };
     args = [JSON.stringify(args)];
 
@@ -142,7 +160,29 @@ router.get('/getHistory', authenticateToken, async(req, res) => {
     const networkObj = await network.connectToNetwork(patientid, hospId);
     const response = await network.invoke(networkObj, true, 'PatientContract:getPatientMedicalHistory', args);
     let parsedResponse = JSON.parse(response.toString());
-    console.log(parsedResponse);
+    // console.log('rs : ', parsedResponse);
+    for(let record of parsedResponse){
+        if(record['changedBy'] !== 'initLedger'){
+            for(let key in record){
+                if(key == 'changedBy'){
+                    record[key] = decrypt(record[key]);
+                }
+                if(key == 'medicalRecord'){
+                    for(let k in record[key]){
+                        record[key][k] = decrypt(record[key][k]);
+                    }
+                }
+                if(key == 'imageUrls'){
+                    let decryptedUrls = [];
+                    for(let url of record[key]){
+                        decryptedUrls.push(decrypt(url));
+                    }
+                    record[key] = decryptedUrls;
+                }
+            }
+        }
+    }
+    console.log('parsed Res : ', parsedResponse);
     res.status(200).send(parsedResponse)
     // res.status(200).send({"msg" : "Hi there"});
 

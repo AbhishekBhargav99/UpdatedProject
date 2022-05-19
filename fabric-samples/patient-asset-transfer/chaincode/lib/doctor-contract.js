@@ -16,6 +16,7 @@ class DoctorContract extends AdminContract {
         let newMedicalRecords = args.medRecords;
         let patientId = args.patientId;
         let updatedBy = args.changedBy;
+        let imageUrls = args.imageUrls;
 
         
         const patient = await PrimaryContract.prototype.readPatient(ctx, patientId);
@@ -74,6 +75,7 @@ class DoctorContract extends AdminContract {
 
         patient.medicalRecord = newMedicalRecords;
         patient.changedBy = updatedBy;
+        patient.imageUrls = imageUrls;
         patient.reasonForUpdate = 'medicalRecordsUpdate'
         const buffer = Buffer.from(JSON.stringify(patient));
         await ctx.stub.putState(patientId, buffer);
@@ -140,6 +142,8 @@ class DoctorContract extends AdminContract {
                 // asset[i].notes = obj.Record.notes
                 asset[i].changedBy = obj.Record.changedBy;
                 asset[i].medicalRecord = obj.Record.medicalRecord;
+                if(obj.Record.imageUrls)
+                    asset[i].imageUrls = obj.Record.imageUrls;
                 asset[i].Timestamp = obj.Timestamp;
             }
             allRecords.push(asset[i]);

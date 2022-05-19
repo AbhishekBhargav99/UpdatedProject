@@ -13,7 +13,8 @@
         "bloodGroup": "O+",
         "changedBy": "initLedger",
         "reasonForUpdate":"initLedger",
-        "permanentToken":123,
+        "permanentToken":"123",
+        "imageUrl":"",
         "medicalRecord" : {
             "reasonsForVisit" : "Heart Pain",
             "allergies": "Face Pimples",
@@ -41,7 +42,8 @@
         "bloodGroup": "B+",
         "changedBy": "initLedger",
         "reasonForUpdate":"initLedger",
-        "permanentToken":123,
+        "permanentToken":"123",
+        "imageUrl":"",
         "medicalRecord" : {
             "reasonsForVisit" : "Heart Burn, shortness of breath, Acidity",
             "allergies": "No",

@@ -5,6 +5,9 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const dotenv = require('dotenv');
 dotenv.config({path: './config.env'});
+const encrytLib = require('../middleware/encryptionlib');
+const encrypt = encrytLib.encrypt;
+const decrypt = encrytLib.decrypt;
 
 const patientModel = require('../models/allModels').patientModel;
 const doctorModels = require('../models/allModels').doctorModels;
@@ -45,7 +48,17 @@ router.get('/allPatients',authenticateToken, async (req, res) => {
 
     const parsedResponse = await JSON.parse(response);
     // console.log("type : ", typeof(parsedResponse));
+    let i = 0;
     for(let patient of parsedResponse){
+        i++;
+        if(i > 2 ){
+            for(let key in patient){
+                if(key != 'patientId'){
+                    patient[key] = decrypt(patient[key])
+                    // console.log('Key : ', key, ' Value : ', patient[key]);
+                }
+            }
+        }
         try{
             const patientRes = await patientModel.findOne({patientId: patient.patientId});
             if(!patientRes) continue
@@ -75,7 +88,7 @@ router.get('/allDoctors', authenticateToken, async (req, res) => {
     
     const networkObj = await network.connectToNetwork(adminid,hospId);
     const response = await network.getAllDoctorsByHospitalId(networkObj, hospId);
-    // console.log(response);
+   
     res.status(200).send(response);
 })
 
@@ -94,13 +107,13 @@ router.post('/newPatient', authenticateToken, async(req, res) => {
     let password = 'password';
     let data = {
         patientId: patientId,
-        firstName: req.body.firstName.trim(),
-        lastName: req.body.lastName.trim(),
+        firstName: encrypt(req.body.firstName.trim()),
+        lastName: encrypt(req.body.lastName.trim()),
         password: password.trim(),
-        age: req.body.age,
-        gender: req.body.gender.trim(),
-        bloodGroup: req.body.bloodGroup,
-        changedBy: adminid,
+        age: encrypt(req.body.age),
+        gender: encrypt(req.body.gender.trim()),
+        bloodGroup: encrypt(req.body.bloodGroup),
+        changedBy: encrypt(adminid),
         permanentToken: 'token'
     }
 
@@ -163,19 +176,11 @@ router.post('/newDoctor', authenticateToken, async (req, res) => {
     
     req.body.role = 'doctor';
     req.body.hospitalId = hospitalid;
-
+    req.body.userId = req.body.userId.trim();
+    req.body.email = req.body.email.trim();
     const docData = JSON.stringify(req.body);
     console.log(docData);
     let doctorId = req.body.userId.trim();
-
-
-
-    let data = {
-        email: req.body.email.trim(),
-        password: ("pass" + req.body.userId),
-        hospitalId: hospitalid,
-    }
-
 
     try{
         const userExists = await network.doesUserExists(doctorId);
@@ -202,10 +207,10 @@ router.post('/newDoctor', authenticateToken, async (req, res) => {
         if(userExist ){
             return res.status(422).json({error: 'User Already Present'});
         }
-        let hashedPassword = await bcrypt.hash(("pass" + req.body.userId), 12);
+        let hashedPassword = await bcrypt.hash(("pass" + doctorId), 12);
         let docData = {
             doctorId: doctorId,
-            email: req.body.email,
+            email: req.body.email.trim(),
             password : hashedPassword
         }
 
@@ -215,7 +220,7 @@ router.post('/newDoctor', authenticateToken, async (req, res) => {
         return res.status(201).json({
             status: true,
             doctorId : registeredDoc.doctorId,
-            password: ("pass" + req.body.userId),
+            password: ("pass" + doctorId),
         })
 
     } catch(err){

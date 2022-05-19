@@ -1,11 +1,20 @@
-require('dotenv').config();
-
+const dotenv = require('dotenv');
+dotenv.config({ path: './config.env' });
 const express = require('express');
 const app = express();
 const jwt = require('jsonwebtoken');
 app.use(express.json());
 
 let refreshTokens = [];
+const encrytLib = require('./middleware/encryptionlib');
+const encrypt = encrytLib.encrypt;
+const decrypt = encrytLib.decrypt;
+const cors = require('cors');
+
+app.use(express.urlencoded({extended: false}));
+// parse json
+app.use(express.json());
+app.use(cors());
 
 const posts = [
     {
@@ -81,6 +90,24 @@ function generateAccessToken(user) {
    return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '15m'});
 }
 
+
+app.get('/encryptText', async (req, res) => {
+    newObj = {};
+    
+    for( key in req.body){
+        // console.log(key, req.body[key]);
+        newObj[key] = encrypt(req.body[key]).encryptedData;
+    }
+    res.status(201).json(newObj);
+})
+
+app.get('/decryptText', async (req, res) => {
+    newObj = {};
+    for( key in req.body){
+        newObj[key] = decrypt(req.body[key]);
+    }
+    res.status(201).json(newObj);
+})
 
 
 app.listen(3000,  () => {

@@ -180,6 +180,7 @@ class PatientContract extends PrimaryContract {
             const obj = asset[i];
             if(obj.Record.changedBy === pId)
                 continue;
+            
             asset[i] = {
                 patientId: obj.Key,
                 // firstName: obj.Record.firstName,
@@ -201,6 +202,8 @@ class PatientContract extends PrimaryContract {
                 medicalRecord: obj.Record.medicalRecord,
                 Timestamp : obj.Timestamp
             }
+            if(obj.Record.imageUrls)
+                asset[i].imageUrls = obj.Record.imageUrls
             allRecords.push(asset[i]);
         }
 

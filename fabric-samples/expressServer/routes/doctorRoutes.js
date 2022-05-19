@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const network = require('../../patient-assets/application-javascript/app.js')
+const encrytLib = require('../middleware/encryptionlib');
+const encrypt = encrytLib.encrypt;
+const decrypt = encrytLib.decrypt;
 
 async function authenticateToken(req, res, next){
     const token = req.headers['accesstoken'];
@@ -19,6 +22,12 @@ async function authenticateToken(req, res, next){
     })
     
   }
+
+function isEncrypted(patientId){
+    if(patientId === 'PID1000xyz' || patientId === 'PID1001xyz')
+        return false;
+    return true;
+}
 
 router.get('/allPermissionedPatients', authenticateToken, async(req, res) => {
     const {hospitalid, doctorid} = req.headers;
@@ -39,8 +48,17 @@ router.get('/allPermissionedPatients', authenticateToken, async(req, res) => {
         return res.status(404).send({"message":"Could Not Access the Patients"})
     }
     const parsedResponse = await JSON.parse(response)
-    console.log(parsedResponse);
-
+    for(patient of parsedResponse ){
+        console.log('id : ', patient['patientId']);
+        if(isEncrypted( patient['patientId'])){
+            for(key in patient){
+                if(key != 'patientId'){
+                    patient[key] = decrypt(patient[key]);
+                }
+            }
+        }
+        
+    }
     res.status(200).send(parsedResponse);
 })
 
@@ -84,25 +102,44 @@ router.patch('/:hospitalId/:doctorId/addRecs/:patientId', authenticateToken, asy
     if(req.userrole !== 'doctor'){
         return res.sendStatus(400);
     }
+    
+
 
     let medRecs = req.body.medRecord;
+    let imageUrls = req.body.imageUrls;
+    let encryptedUrls = [];
+    if(isEncrypted(patientId)){
+        for(let url of imageUrls )
+            encryptedUrls.push(encrypt(url));
+    }
+    else
+        encryptedUrls = imageUrls;
 
 
-    console.log('medRecord : ', medRecs);
+    // console.log('medRecord : ', medRecs);
     // return res.status(200).send('HI');
 
     medRecords = {};
-
     for(let record of medRecs){
         let key = record.key.trim();
-        let value = record.value.trim();
+        let value = "";
+        if(isEncrypted(patientId)){
+            value = encrypt(record.value.trim());
+        }
+        else 
+            value = (record.value.trim());
+        
         medRecords[key] = value;
     }
     let args = {};
     args.medRecords = medRecords;
     args.patientId = patientId;
-    args.changedBy = doctorId;
-    console.log(args);
+    if(isEncrypted(patientId)){
+        args.changedBy = encrypt(doctorId);
+    }
+    else
+        args.changedBy = doctorId;
+    args.imageUrls = encryptedUrls;
     args= [JSON.stringify(args)];
     
     
@@ -136,8 +173,30 @@ router.get('/getMedicalHistory', authenticateToken, async(req, res) => {
         return res.status(404).send({"message":"Could Not Access the Patient's Records"})
     }
     const parsedResponse = await JSON.parse(response)
-    console.log('pr : ', parsedResponse);
-
+    console.log('pa : ', parsedResponse)
+    for(let record of parsedResponse){
+        if(parsedResponse[parsedResponse.length - 1]['changedBy'] !== 'initLedger' ){
+            for(let key in record){
+                if(key == 'changedBy'){
+                    record[key] = decrypt(record[key]);
+                }
+                if(key == 'medicalRecord'){
+                    for(let k in record[key]){
+                       record[key][k] = decrypt(record[key][k]);
+                       
+                    }
+                }
+                if(key == 'imageUrls'){
+                    let decryptedUrls = [];
+                    for(let url of record[key]){
+                        decryptedUrls.push(decrypt(url));
+                    }
+                    record[key] = decryptedUrls;
+                }
+            }
+        }
+    }
+    
     res.status(200).json(parsedResponse);
 })
 
